@@ -1,0 +1,119 @@
+---
+title: "News Groups Text Classifier Part-1"
+author: "Rajiv"
+date: "12 August 2017"
+output: html_document
+---
+
+# 20 News Groups Dataset Classification using Bayesian Classifier - Part-1
+
+This exercise is Half done in R(Part-1) and Half in Python(part-2). I am doing this because, R takes much time to execute Bayesian model on such huge corpora of data and Python is more popular for Text Mining than R and it does the work much faster and efficiently. So, in this file i am only going to make an single file of all the 20,000 files available in the 20 News classifier dataset and then take that file import it in Python and run an Classifier on that.
+
+The part-2 of this analysis, python code can be found inmy Git Repository: <https://github.com/Rajiv2806/20-News-Groups-Classifier/blob/master/News_Groups_Classifier_Part-2.ipynb>
+
+The 20 News groups dataset is a famous dataset obtained from the UCI ML repository from <https://archive.ics.uci.edu/ml/datasets/Twenty+Newsgroups>. This dataset containes 1000 of articles for each 20 topics like Sport, Spiritual, computers, Politics etc.., 
+
+
+-----------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------
+In this below chunk we are reading the Whole data as one single vector
+
+```{r, message=FALSE, warning=FALSE}
+rm(list=ls())
+
+setwd("D:/ISB/34-DataMining-2/Assignment/20news-19997")
+Topics <- dir()
+doc_collection <- c()
+
+# This will take some time to execute
+for(i in 1:length(Topics)){
+    file_names <- list.files(paste0(getwd(),"/",Topics[i]))
+    for(j in 1:length(file_names)){ 
+            file_data <- readLines(paste0(getwd(),"/",Topics[i],"/",file_names[j]),n = -1L)
+            document <- c()
+            for (k in 1:length(file_data)){
+                    document <- paste(document,file_data[k])
+                            }
+            doc_collection <- c(doc_collection,document)
+    }
+}
+
+#head(doc_collection,1)
+
+rm(i,j,k,file_names,file_data,document)
+```
+
+As we can see that the original data is not so clean, we apply some of the text cleaning functions to get the corpus ready for textual analysis.
+
+First we write an function called 'text.clean' and give our data to the corpus and the function returns the cleaned corpus removing all the ASCII characters, converting the whole text to lower case, removing numbers, removing white spaces etc..,
+
+```{r, message=FALSE, warning=FALSE}
+#A user defined function for cleaning up corpus
+text.clean = function(x)    
+{ require("tm")
+    x  =  gsub("<.*?>", " ", x)               # regex for removing HTML tags
+    x  =  iconv(x, "latin1", "ASCII", sub="") # Keep only ASCII characters
+    x  =  gsub("[^[:alnum:]]", " ", x)        # keep only alpha numeric 
+    x  =  tolower(x)                          # convert to lower case characters
+    x  =  removeNumbers(x)                    # removing numbers
+    x  =  stripWhitespace(x)                  # removing white space
+    x  =  gsub("^\\s+|\\s+$", "", x)          # remove leading and trailing white space
+    return(x)
+}
+
+#Using the above function on the data
+for (i in 1:length(doc_collection)){doc_collection[i] <- text.clean(doc_collection[i])}
+
+rm(i,text.clean)
+```
+
+
+Removing the frequent words that will not help much in our textual analysis, like (a, an, the, of...) and then stemming the words in the document.
+
+```{r, message=FALSE, warning=FALSE}
+# Removing Stopwords from the text corpus
+library(tm)
+
+stopwords1 <- tm::stopwords(kind="en")
+stopwords2 <- readLines("https://raw.githubusercontent.com/Rajiv2806/Assignment/master/stopwords.txt")
+
+doc_collection <- removeWords(doc_collection,stopwords1)
+doc_collection <- removeWords(doc_collection,stopwords2)
+
+
+# Removing excessive white spaces and stemming the words.
+doc_collection <- stripWhitespace(doc_collection)
+doc_collection <- stemDocument(doc_collection)
+
+rm(stopwords1,stopwords2)
+```
+
+
+
+We now append all the documents (each file which is like an observation is called an document in textual analysis) to the topic name and make a dataframe out of  it.
+
+```{r, message=FALSE, warning=FALSE}
+# Creating a Dataframe with all the text and related topics
+setwd("D:/ISB/34-DataMining-2/Assignment/20news-19997")
+Topic_Names <- c()
+
+for (i in 1:length(Topics)){
+    Topic_Names <- c(Topic_Names,rep(Topics[i],length(list.files(paste0(getwd(),"/",Topics[i])))))}
+
+df <- data.frame(id = 1:length(doc_collection),doc_collection = doc_collection,Topic_Names = Topic_Names )
+df$doc_collection <- as.character(df$doc_collection)
+
+#head(df,3)
+
+rm(i,Topic_Names,doc_collection,Topics)
+```
+
+
+Writing the dataframe to an CSV file and we will import that in the Python code.
+
+```{r}
+setwd("D:/ISB/34-DataMining-2/Assignment")
+write.csv(df,"20News.csv")
+```
+
